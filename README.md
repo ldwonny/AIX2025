@@ -1,1 +1,14 @@
 # AIX2025
+
+## Mid (3.28)
+### - Software : Do quantization (Find a set of input and weight multipliers)
+### - Implement an accelerator engine
+### - Do RTL simulation for the three first CONV layers
+
+## Final (5.16)
+### - Complete the design for an accelerator engine
+* Compare the output from the hardware simulation and the software
+### - Do FPGA implementation
+* Pack an IP and integrate it into the system
+* Synthesize the top system
+### - Verify the design on the board (Output, Speed)
