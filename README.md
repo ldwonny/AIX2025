@@ -16,3 +16,4 @@
 ## Useful Links
 * YOLO : https://www.notion.so/aix2024tutorial02/02-YOLO-network-AIX-tutorial-3b4314c624bf4007a4268df33b0d6b82
 * Quantization : https://www.notion.so/aix2024tutorial02/03-Quantization-AIX-tutorial-5a03d7366197428cbf1454e4be97057c
+* HDLbits (Verilog Practice) : https://hdlbits.01xz.net
