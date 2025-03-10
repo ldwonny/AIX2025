@@ -201,7 +201,6 @@ void forward_convolutional_layer_q(network net, layer l, network_state state)
     for (i = 0; i < l.outputs; ++i) {
         l.output[i] = output_q[i] * ALPHA1;
     }
-
     
     // Write data for the HW verification
     //{{{
@@ -292,70 +291,64 @@ float *network_predict_quantized(network net, float *input)
 
 /* Quantization-related */
 
+
 void do_quantization(network net) {
     int counter = 0;
 
     int j;
-	//Dummy weight_quantization 
-	#define TOTAL_CALIB_LAYER 11
-	// TODO
-	//{{{		
-	float weight_quant_multiplier[TOTAL_CALIB_LAYER] = {
-      16,	  //conv 0
-      64,     //conv 2
-      64,     //conv 4
-      64,     //conv 6
-      64,     //conv 8
-      64,     //conv 10
-      64,     //conv 12
-      64,     //conv 13
-      64,     //conv 14
-      64,     //conv 17
-      64};    //conv 20
-	
+    //Dummy weight_quantization 
+#define TOTAL_CALIB_LAYER 11
+// TODO
+//{{{		
     float input_quant_multiplier[TOTAL_CALIB_LAYER] = {
-     128,	  //conv 0
-      16,     //conv 2
+      64,	  //conv 0
+      8,     //conv 2
       16,     //conv 4
-      16,     //conv 6
-      16,     //conv 8
-      16,     //conv 10     
-      16,     //conv 12
-      16,     //conv 13
+      8,     //conv 6
+      8,     //conv 8
+      8,     //conv 10
+      8,     //conv 12
+      8,     //conv 13
       16,     //conv 14
       16,     //conv 17
-      16};    //conv 20
+      8 };    //conv 20
 
-	printf("Multipler    Input    Weight    Bias\n");
+
+    printf("Multipler    Input    Weight    Bias\n");
     for (j = 0; j < net.n; ++j) {
-        layer *l = &net.layers[j];
+        layer* l = &net.layers[j];
 
         /*
-        TODO: implement quantization 
+        TODO: implement quantization
         The implementation given below is a naive version of per-network quantization; implement your own quantization that minimizes the mAP degradation
         */
 
         //printf("\n");
         if (l->type == CONVOLUTIONAL) { // Quantize conv layer only            
-            size_t const filter_size = l->size*l->size*l->c;
+            size_t const filter_size = l->size * l->size * l->c;
 
             int i, fil;
 
             // Quantized Parameters
-			//{{{
-				// Input feature map
-				l->input_quant_multiplier   = (counter < TOTAL_CALIB_LAYER) ? input_quant_multiplier [counter] : 16;
-				
-				// Weight
-				l->weights_quant_multiplier = (counter < TOTAL_CALIB_LAYER) ? weight_quant_multiplier[counter] : 16;
-				
-				++counter;
-			//}}}	
-            // Weight Quantization
-			for (fil = 0; fil < l->n; ++fil) {          // 
+            //{{{
+                // Input feature map
+            l->input_quant_multiplier = (counter < TOTAL_CALIB_LAYER) ? input_quant_multiplier[counter] : 16;
+
+            float max_weight = 0.0f;
+            for (fil = 0; fil < l->n; ++fil) {          // 
                 for (i = 0; i < filter_size; ++i) {
-                    float w = l->weights[fil*filter_size + i] * l->weights_quant_multiplier; // Scale
-                    l->weights_int8[fil*filter_size + i] = max_abs(w, MAX_VAL_8); // Clip
+                    float w_m_find = fabs(l->weights[fil * filter_size + i]);
+                    if (w_m_find > max_weight) max_weight = w_m_find;
+                }
+            }
+            l->weights_quant_multiplier = (max_weight > 0) ? (127.0f / max_weight) : 1.0f;
+            ++counter;
+            //}}}	
+            // Weight Quantization
+            for (fil = 0; fil < l->n; ++fil) {          // 
+                for (i = 0; i < filter_size; ++i) {
+                    float w = l->weights[fil * filter_size + i] * l->weights_quant_multiplier; // Scale
+                    l->weights_int8[fil * filter_size + i] = max_abs(w, MAX_VAL_8); // Clip
                 }
             }
 
@@ -367,13 +360,15 @@ void do_quantization(network net) {
             }
 
             //printf(" CONV%d multipliers: input %g, weights %g, bias %g \n", j, l->input_quant_multiplier, l->weights_quant_multiplier, biases_multiplier);
-			printf(" CONV%d: \t%g \t%g \t%g \n", j, l->input_quant_multiplier, l->weights_quant_multiplier, biases_multiplier);
+            printf(" CONV%d: \t%g \t%g \t%g \n", j, l->input_quant_multiplier, l->weights_quant_multiplier, biases_multiplier);
+
         }
         else {
             //printf(" No quantization for layer %d (layer type: %d) \n", j, l->type);
         }
     }
 }
+
 
 void save_quantized_model(network net) {
     int j;
